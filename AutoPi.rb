@@ -1,4 +1,6 @@
-require 'Sinatra'
+require 'sinatra/base'
+require 'sinatra/reloader'
+require 'wiringpi'
 
 class AutoPi < Sinatra::Base
   def initialize
@@ -9,6 +11,10 @@ class AutoPi < Sinatra::Base
     mode_in  = ['in', 'input', '0', 'read']
     mode_out = ['out', 'output', '1', 'write']
   end
+
+  configure :development do
+    register Sinatra::Reloader
+  end
  
   get "/" do
     body "Usage: turn items on or off: /[on|off]/:room/:device to dim /dim/:room/:device/:level. Level should be between 0 and 100."
@@ -17,37 +23,47 @@ class AutoPi < Sinatra::Base
   get "/gpio/readall" do
     output = `gpio readall`
     result = $?.success?
-    body = output
+    body = output.gsub! "\n", "<br/>"
   end
  
   get "/gpio/:action/:pin" do
+    action = params[:action]
+    pin = params[:pin].to_i
     case action
       when /on/i
-        @io.write(pin, 1)
+        body = @io.write(pin, 1)
       when /off/i
-        @io.write(pin, 0)
+        body = @io.write(pin, 0)
       when /toggle/i
-        @io.write(pin, !@io.read(pin))
+        body = @io.write(pin, 1 - @io.read(pin))
       when /status/i
-        @io.read(pin)
+        body = @io.read(pin)
+      when /read/i
+        body = @io.read(pin)
       when /blink/i
         @io.mode(pin, OUTPUT)
         @io.write(pin, 1)
         sleep(1)
         @io.write(pin, 0)
       when /input/i
-        @io.mode(pin, INPUT)
+        body = @io.mode(pin, INPUT)
       when /output/i
-        @io.mode(pin, OUTPUT)
+        body = @io.mode(pin, OUTPUT)
+      when /pwm/i
+        body = `gpio pwm 18 500`
     end
-    body "Usage: Interact with GPIO Pins: 
-    /gpio/on/:pin - Pulls :pin High
-    /gpio/off/:pin - Pulls :pin Low
-    /gpio/toggle/:pin - Toggles :pin
-    /gpio/status/:pin - Reads Status of :pin (0 = low, 1 = high)
-    /gpio/input/:pin - Puts :pin in Input mode
-    /gpio/output/:pin - Puts :pin in Output mode 
-    Pins are [0, 1, 4, 7, 8, 9, 10, 11, 14, 15, 17, 18, 21, 22, 23, 24, 25]"
+  end
+
+  get "/gpio/help" do
+    help = "<div>Usage: Interact with GPIO Pins:<br/> 
+    /gpio/on/:pin - Pulls :pin High<br/>
+    /gpio/off/:pin - Pulls :pin Low<br/>
+    /gpio/toggle/:pin - Toggles :pin<br/>
+    /gpio/status/:pin - Reads Status of :pin (0 = low, 1 = high)<br/>
+    /gpio/read/:pin - Same as Status<br/>
+    /gpio/input/:pin - Puts :pin in Input mode<br/>
+    /gpio/output/:pin - Puts :pin in Output mode<br/>
+    Pins are [0, 1, 4, 7, 8, 9, 10, 11, 14, 15, 17, 18, 21, 22, 23, 24, 25]</div>"
   end
 
   get "/gpio/set/:pin/:mode" do
