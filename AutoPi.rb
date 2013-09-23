@@ -42,7 +42,7 @@ class AutoPi < Sinatra::Base
     body = table
   end
  
-  get "/gpio/:action/:pin.json" do
+  post "/gpio/?:action?/?:pin?*" do
     content_type :json
     action = params[:action]
     pin = params[:pin].to_i
@@ -75,11 +75,13 @@ class AutoPi < Sinatra::Base
       when /pwm/i
         `gpio pwm 18 500`
         result = @io.read(pin)
+      else
+        result = nil
     end
     if result_text.nil?
       result_text = result == 1 ? "High" : "Low"
     end
-    { :result => result, :text => result_text, :success => true }.to_json
+    { :pin => pin, :value => result, :text => result_text, :success => !result.nil?, :result => !result.nil? ? "success" : "failed" }.to_json
   end
 
   get "/gpio/:action/:pin" do
