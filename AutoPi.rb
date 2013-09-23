@@ -23,7 +23,12 @@ class AutoPi < Sinatra::Base
   get "/gpio/readall" do
     output = `gpio readall`
     result = $?.success?
-    body = output.gsub! "\n", "<br/>"
+    table = output
+    table.gsub! "\n|", "\n<tr><td>"
+    table.gsub! "\n", "</td></tr>"
+    table.gsub! "|", "</td><td>"
+    table = "<table><tr>" + table + "</tr></table>"
+    body = table
   end
  
   get "/gpio/:action/:pin" do
