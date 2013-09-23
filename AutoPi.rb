@@ -1,6 +1,7 @@
 require 'sinatra/base'
 require 'sinatra/reloader'
 require 'wiringpi'
+require 'json'
 
 class AutoPi < Sinatra::Base
   def initialize
@@ -41,6 +42,46 @@ class AutoPi < Sinatra::Base
     body = table
   end
  
+  get "/gpio/:action/:pin.json" do
+    content_type :json
+    action = params[:action]
+    pin = params[:pin].to_i
+    case action
+      when /on|high|1/i
+        @io.write(pin, 1)
+        result = @io.read(pin)
+      when /off|low|0/i
+        @io.write(pin, 0)
+        result = @io.read(pin)
+      when /toggle|flip/i
+        @io.write(pin, 1 - @io.read(pin))
+        result = @io.read(pin)
+      when /status/i
+        result = @io.read(pin)
+      when /read/i
+        result = @io.read(pin)
+      when /blink/i
+        @io.mode(pin, OUTPUT)
+        @io.write(pin, 1)
+        sleep(1)
+        @io.write(pin, 0)
+        result = @io.read(pin)
+      when /input/i
+        @io.mode(pin, INPUT)
+        result_text = "in Input mode"
+      when /output/i
+        @io.mode(pin, OUTPUT)
+        result_text = "in Output mode"
+      when /pwm/i
+        `gpio pwm 18 500`
+        result = @io.read(pin)
+    end
+    if result_text.nil?
+      result_text = result == 1 ? "High" : "Low"
+    end
+    { :result => result, :text => result_text, :success => true }.to_json
+  end
+
   get "/gpio/:action/:pin" do
     action = params[:action]
     pin = params[:pin].to_i
