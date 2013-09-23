@@ -17,44 +17,70 @@ class AutoPi < Sinatra::Base
   end
  
   get "/" do
-    body "Usage: turn items on or off: /[on|off]/:room/:device to dim /dim/:room/:device/:level. Level should be between 0 and 100."
+    body "<div>Garage<br/>
+    Lights<br/> 
+    GPIO</div>"
   end
 
   get "/gpio/readall" do
     output = `gpio readall`
     result = $?.success?
-    body = output.gsub! "\n", "<br/>"
+    lines = output.split( /\r?\n/ )
+    lines.delete_at(20)
+    lines.delete_at(2)
+    lines.delete_at(0)
+    lines[0].sub! "|", ""
+    lines[0].gsub! "|", "</th><th>"
+    lines[0] = "<th>" + lines[0] + "</th>"
+    table = lines.join("\n")
+    table.gsub! "\n|", "\n<tr><td>"
+    table.gsub! "\n", "</td></tr>"
+    table.gsub! "|", "</td><td>"
+    table = "<table><tr>" + table + "</tr></table>"
+    
+    body = table
   end
  
   get "/gpio/:action/:pin" do
     action = params[:action]
     pin = params[:pin].to_i
     case action
-      when /on/i
-        body = @io.write(pin, 1)
-      when /off/i
-        body = @io.write(pin, 0)
-      when /toggle/i
-        body = @io.write(pin, 1 - @io.read(pin))
+      when /on|high|1/i
+        @io.write(pin, 1)
+        result = @io.read(pin)
+      when /off|low|0/i
+        @io.write(pin, 0)
+        result = @io.read(pin)
+      when /toggle|flip/i
+        @io.write(pin, 1 - @io.read(pin))
+        result = @io.read(pin)
       when /status/i
-        body = @io.read(pin)
+        result = @io.read(pin)
       when /read/i
-        body = @io.read(pin)
+        result = @io.read(pin)
       when /blink/i
         @io.mode(pin, OUTPUT)
         @io.write(pin, 1)
         sleep(1)
         @io.write(pin, 0)
+        result = @io.read(pin)
       when /input/i
-        body = @io.mode(pin, INPUT)
+        @io.mode(pin, INPUT)
+        result_text = "in Input mode"
       when /output/i
-        body = @io.mode(pin, OUTPUT)
+        @io.mode(pin, OUTPUT)
+        result_text = "in Output mode"
       when /pwm/i
-        body = `gpio pwm 18 500`
+        `gpio pwm 18 500`
+        result = @io.read(pin)
     end
+    if result_text.nil?
+      result_text = result == 1 ? "High" : "Low"
+    end
+    body = "Pin #{pin} is #{result_text}"
   end
 
-  get "/gpio/help" do
+  get "/gpio*" do
     help = "<div>Usage: Interact with GPIO Pins:<br/> 
     /gpio/on/:pin - Pulls :pin High<br/>
     /gpio/off/:pin - Pulls :pin Low<br/>
