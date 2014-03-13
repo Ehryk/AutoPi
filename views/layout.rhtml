@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="/styles/site.css" type="text/css">
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+    <script src="/scripts/site.js"></script>
+    <% if defined? term %>
+      <title>Do I Want to be <%= term %>?</title>
+    <% else %>
+      <title>Do I Want to be X?</title>
+    <% end %>
+  </head>
+  <body>
+    <%= yield %>
+    <div id="footer">
+      &copy; <%= Time.now.year %> Repressed Developers United
+    </div>
+  </body>
+</html>

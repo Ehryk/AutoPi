@@ -159,4 +159,25 @@ class AutoPi < Sinatra::Base
     end
     body "Room #{room} Device #{device} #{action}#{" to #{level}%" if level}."
   end
+
+  get "/test" do
+    erb :test
+  end
+
+  get "/garage" do
+    erb :garage
+  end
+
+  get "/light" do
+    erb :light
+  end
+
+  get "/camera" do
+    erb :camera
+  end
+
+  not_found do
+    erb :404
+  end
+
 end
